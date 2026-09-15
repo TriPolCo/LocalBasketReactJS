@@ -1,0 +1,145 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="48"
+  height="48"
+  viewBox="0 0 48 48"
+  fill="none"
+>
+  <defs>
+    <!-- Green + Orange Gradient -->
+    <linearGradient
+      id="bagGradient"
+      x1="8"
+      y1="8"
+      x2="40"
+      y2="42"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0" stop-color="#22C55E"/>
+      <stop offset="0.55" stop-color="#16A34A"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+
+    <linearGradient
+      id="handleGradient"
+      x1="16"
+      y1="5"
+      x2="32"
+      y2="16"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+
+    <filter
+      id="bagShadow"
+      x="-20%"
+      y="-20%"
+      width="140%"
+      height="150%"
+    >
+      <feDropShadow
+        dx="0"
+        dy="3"
+        stdDeviation="3"
+        flood-color="#16A34A"
+        flood-opacity="0.22"
+      />
+    </filter>
+  </defs>
+
+  <!-- ========================= -->
+  <!-- SHOPPING BAG -->
+  <!-- ========================= -->
+
+  <path
+    d="
+      M9 17
+      C9 15.34 10.34 14 12 14
+      H36
+      C37.66 14 39 15.34 39 17
+      L41.2 38.5
+      C41.4 40.43 39.88 42 37.94 42
+      H10.06
+      C8.12 42 6.6 40.43 6.8 38.5
+      L9 17Z
+    "
+    fill="url(#bagGradient)"
+    filter="url(#bagShadow)"
+  />
+
+  <!-- ========================= -->
+  <!-- BAG TOP -->
+  <!-- ========================= -->
+
+  <path
+    d="M9 17H39"
+    stroke="#FFFFFF"
+    stroke-width="2"
+    stroke-linecap="round"
+    opacity="0.35"
+  />
+
+  <!-- ========================= -->
+  <!-- HANDLE -->
+  <!-- ========================= -->
+
+  <path
+    d="
+      M16 16
+      V12
+      C16 7.58 19.58 4 24 4
+      C28.42 4 32 7.58 32 12
+      V16
+    "
+    stroke="url(#handleGradient)"
+    stroke-width="4"
+    stroke-linecap="round"
+  />
+
+  <!-- Handle highlight -->
+
+  <path
+    d="
+      M19 15
+      V12
+      C19 9.24 21.24 7 24 7
+      C26.76 7 29 9.24 29 12
+      V15
+    "
+    stroke="#FFFFFF"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    opacity="0.65"
+  />
+
+  <!-- ========================= -->
+  <!-- DAILYDROPS DD -->
+  <!-- ========================= -->
+
+  <text
+    x="24"
+    y="33"
+    text-anchor="middle"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="11"
+    font-weight="700"
+    fill="#FFFFFF"
+  >
+    DD
+  </text>
+
+  <!-- ========================= -->
+  <!-- BAG SHINE -->
+  <!-- ========================= -->
+
+  <path
+    d="M12 20L10.5 33"
+    stroke="#FFFFFF"
+    stroke-width="2"
+    stroke-linecap="round"
+    opacity="0.3"
+  />
+
+</svg>
