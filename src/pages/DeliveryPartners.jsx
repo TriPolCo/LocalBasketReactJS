@@ -5,98 +5,24 @@ import {
   Loader2,
   Phone,
   Mail,
-  MapPin,
   Star,
   ChevronLeft,
   ChevronRight,
-  Pencil
+  Pencil,
+  Eye
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import AddDeliveryPartnerModal from "../components/delivery/AddDeliveryPartnerModal";
 import UpdateDeliveryPartnerModal from "../components/delivery/UpdateDeliveryPartnerModal";
-
-// Dummy data for individual delivery partners matching the system theme
-const INITIAL_DELIVERY_PARTNERS = [
-  {
-    id: "dp-101",
-    first_name: "Rahul",
-    last_name: "Verma",
-    email: "rahul.verma@deliver.com",
-    phone_number: "9876543210",
-    vehicle_type: "Electric Scooter",
-    vehicle_number: "DL-08-EV-4321",
-    rating: 4.8,
-    total_deliveries: 1420,
-    is_online: true,
-    is_active: true,
-    current_location: "Noida Sector 62",
-    joined_date: "2025-03-12"
-  },
-  {
-    id: "dp-102",
-    first_name: "Amit",
-    last_name: "Kumar",
-    email: "amit.kumar@deliver.com",
-    phone_number: "8765432109",
-    vehicle_type: "Motorcycle",
-    vehicle_number: "UP-16-AB-9876",
-    rating: 4.6,
-    total_deliveries: 980,
-    is_online: true,
-    is_active: true,
-    current_location: "Noida Sector 18",
-    joined_date: "2025-06-15"
-  },
-  {
-    id: "dp-103",
-    first_name: "Suresh",
-    last_name: "Yadav",
-    email: "suresh.y@deliver.com",
-    phone_number: "7654321098",
-    vehicle_type: "Bicycle",
-    vehicle_number: "N/A (Eco Rider)",
-    rating: 4.9,
-    total_deliveries: 610,
-    is_online: false,
-    is_active: true,
-    current_location: "Indirapuram",
-    joined_date: "2025-09-01"
-  },
-  {
-    id: "dp-104",
-    first_name: "Vikram",
-    last_name: "Singh",
-    email: "vikram.s@deliver.com",
-    phone_number: "6543210987",
-    vehicle_type: "Motorcycle",
-    vehicle_number: "DL-03-XY-1234",
-    rating: 4.2,
-    total_deliveries: 340,
-    is_online: false,
-    is_active: false,
-    current_location: "Mayur Vihar",
-    joined_date: "2026-01-10"
-  },
-  {
-    id: "dp-105",
-    first_name: "Manoj",
-    last_name: "Gupta",
-    email: "manoj.g@deliver.com",
-    phone_number: "9988776655",
-    vehicle_type: "Electric Scooter",
-    vehicle_number: "UP-14-EV-8899",
-    rating: 4.7,
-    total_deliveries: 1150,
-    is_online: true,
-    is_active: true,
-    current_location: "Noida Sector 15",
-    joined_date: "2025-04-20"
-  }
-];
+import { useDeliveryPartners } from "../hooks/deliveryPartners/useDeliveryPartners";
 
 export default function DeliveryPartners() {
-  const [partnersList, setPartnersList] = useState(INITIAL_DELIVERY_PARTNERS);
+  const navigate = useNavigate();
+  const { deliveryPartners, loading: isLoading, error, refetch } = useDeliveryPartners();
+  const isError = Boolean(error);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL"); // ALL, ONLINE, OFFLINE
+  const [statusFilter, setStatusFilter] = useState("ALL"); // ALL, AVAILABLE, UNAVAILABLE
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
@@ -104,26 +30,23 @@ export default function DeliveryPartners() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState(null);
 
-  const isLoading = false;
-  const isError = false;
+  const partnersList = Array.isArray(deliveryPartners) ? deliveryPartners : [];
 
-  // Filter partners based on search query and online/offline status
+  // Filter partners based on search query and availability status
   const filteredPartners = partnersList.filter((partner) => {
-    const fullName = `${partner.first_name} ${partner.last_name}`.toLowerCase();
-    const email = partner.email.toLowerCase();
-    const phone = partner.phone_number;
-    const vehicle = partner.vehicle_type.toLowerCase();
+    const fullName = `${partner.first_name || ""} ${partner.last_name || ""}`.toLowerCase();
+    const email = (partner.email || "").toLowerCase();
+    const phone = partner.phone_number || "";
 
     const matchesSearch =
       fullName.includes(searchQuery.toLowerCase()) ||
       email.includes(searchQuery.toLowerCase()) ||
-      phone.includes(searchQuery) ||
-      vehicle.includes(searchQuery.toLowerCase());
+      phone.includes(searchQuery);
 
     const matchesStatus =
       statusFilter === "ALL" ||
-      (statusFilter === "ONLINE" && partner.is_online) ||
-      (statusFilter === "OFFLINE" && !partner.is_online);
+      (statusFilter === "AVAILABLE" && partner.is_available) ||
+      (statusFilter === "UNAVAILABLE" && !partner.is_available);
 
     return matchesSearch && matchesStatus;
   });
@@ -139,27 +62,6 @@ export default function DeliveryPartners() {
     }
   };
 
-  const handleAddSuccess = (newPartnerData) => {
-    const newPartner = {
-      id: `dp-${Date.now()}`,
-      ...newPartnerData,
-      rating: 5.0,
-      total_deliveries: 0,
-      is_online: false,
-      joined_date: new Date().toISOString().split("T")[0]
-    };
-    setPartnersList([newPartner, ...partnersList]);
-    setIsAddModalOpen(false);
-  };
-
-  const handleUpdateSuccess = (updatedData) => {
-    setPartnersList((prev) =>
-      prev.map((item) => (item.id === updatedData.id ? { ...item, ...updatedData } : item))
-    );
-    setIsUpdateModalOpen(false);
-    setSelectedPartner(null);
-  };
-
   return (
     <div className="space-y-6 text-gray-100">
       {/* Top Header */}
@@ -169,7 +71,7 @@ export default function DeliveryPartners() {
             <Bike className="w-5 h-5 text-yellow-500" /> Delivery Partners
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
-            Manage individual field delivery personnel, track active statuses, and fleet ratings.
+            Manage individual field delivery personnel, track active availability, and performance metrics.
           </p>
         </div>
 
@@ -189,7 +91,7 @@ export default function DeliveryPartners() {
           <Search className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search partners by name, phone, or vehicle..."
+            placeholder="Search partners by name, phone, or email..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -201,7 +103,7 @@ export default function DeliveryPartners() {
 
         {/* Status Filters */}
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-          {["ALL", "ONLINE", "OFFLINE"].map((status) => (
+          {["ALL", "AVAILABLE", "UNAVAILABLE"].map((status) => (
             <button
               key={status}
               type="button"
@@ -234,7 +136,7 @@ export default function DeliveryPartners() {
       {/* Error State */}
       {isError && (
         <div className="flex h-48 items-center justify-center rounded-md border border-rose-500/20 bg-rose-500/10 p-6 text-center text-xs font-medium text-rose-400 shadow-xl">
-          Failed to load delivery partners. Please try again later.
+          {error || "Failed to load delivery partners. Please try again later."}
         </div>
       )}
 
@@ -254,84 +156,105 @@ export default function DeliveryPartners() {
               <thead className="border-b border-gray-800 bg-gray-900/80 text-[11px] font-medium text-gray-400">
                 <tr>
                   <th className="py-3 pl-4 pr-2 w-10">#</th>
-                  <th className="py-3 px-3">Partner Name</th>
+                  <th className="py-3 px-3">Partner Details</th>
                   <th className="py-3 px-3">Contact Information</th>
-                  <th className="py-3 px-3">Vehicle Details</th>
+                  <th className="py-3 px-3 text-center">Gender / DOB</th>
                   <th className="py-3 px-3 text-center">Performance</th>
-                  <th className="py-3 px-3 text-center">Duty Status</th>
+                  <th className="py-3 px-3 text-center">Availability Status</th>
                   <th className="py-3 pl-3 pr-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/60">
                 {currentTableData.map((partner, index) => {
                   const absoluteIndex = startIndex + index + 1;
-                  const fullName = `${partner.first_name} ${partner.last_name}`;
-                  const isOnline = partner.is_online;
+                  const fullName = `${partner.first_name || ""} ${partner.last_name || ""}`.trim() || "Unnamed Partner";
+                  const isAvailable = partner.is_available;
 
                   return (
-                    <tr key={partner.id} className="hover:bg-gray-800/40 transition-colors">
+                    <tr
+                      key={partner.id}
+                      onClick={() => navigate(`/delivery-partners/${partner.id}`)}
+                      className="hover:bg-gray-800/40 transition-colors cursor-pointer"
+                    >
                       <td className="py-3 pl-4 pr-2 font-medium text-gray-500">
                         {absoluteIndex}
                       </td>
                       <td className="py-3 px-3">
-                        <div className="font-semibold text-white flex items-center gap-1.5">
-                          {fullName}
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full border border-gray-800 bg-gray-950 overflow-hidden flex items-center justify-center shrink-0">
+                            {partner.profile_image_url ? (
+                              <img src={partner.profile_image_url} alt={fullName} className="h-full w-full object-cover" />
+                            ) : (
+                              <Bike className="h-3.5 w-3.5 text-gray-500" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-white">{fullName}</div>
+                            <span className="text-[10px] text-gray-400 font-mono">ID: {partner.id.slice(0, 8)}...</span>
+                          </div>
                         </div>
-                        <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5">
-                          <MapPin className="h-3 w-3 text-yellow-500 shrink-0" /> {partner.current_location}
-                        </span>
                       </td>
                       <td className="py-3 px-3 space-y-0.5">
                         <div className="flex items-center gap-1.5 text-gray-300">
                           <Phone className="h-3 w-3 text-gray-500 shrink-0" />
-                          <span>{partner.phone_number}</span>
+                          <span>{partner.phone_number || "N/A"}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-gray-400 text-[11px]">
                           <Mail className="h-3 w-3 text-gray-500 shrink-0" />
-                          <span>{partner.email}</span>
+                          <span>{partner.email || "N/A"}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="font-medium text-gray-200">{partner.vehicle_type}</div>
-                        <span className="font-mono text-[10px] text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">
-                          {partner.vehicle_number}
-                        </span>
+                      <td className="py-3 px-3 text-center text-gray-300">
+                        <div className="font-medium">{partner.gender || "N/A"}</div>
+                        <span className="text-[10px] text-gray-400">{partner.date_of_birth || "N/A"}</span>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <div className="inline-flex items-center gap-1 bg-gray-950 px-2 py-0.5 rounded border border-gray-800 font-semibold text-yellow-400">
                           <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                          <span>{partner.rating}</span>
+                          <span>{partner.average_rating || "0.00"}</span>
                         </div>
                         <div className="text-[10px] text-gray-400 mt-0.5">
-                          {partner.total_deliveries} orders completed
+                          {partner.completed_deliveries || 0} completed ({partner.cancelled_deliveries || 0} cancelled)
                         </div>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span
-                          className={`inline-flex items-center justify-center min-w-[72px] rounded-md px-2 py-0.5 text-[10px] font-medium tracking-wide border ${
-                            isOnline
+                          className={`inline-flex items-center justify-center min-w-[80px] rounded-md px-2 py-0.5 text-[10px] font-medium tracking-wide border ${
+                            isAvailable
                               ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                              : "bg-gray-800 text-gray-400 border-gray-700"
+                              : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                           }`}
                         >
-                          {isOnline ? "Online" : "Offline"}
+                          {isAvailable ? "Available" : "Unavailable"}
                         </span>
-                        <div className="text-[10px] text-gray-500 mt-0.5">
-                          {partner.is_active ? "Account Active" : "Account Suspended"}
+                        <div className={`text-[10px] mt-0.5 ${partner.is_active ? "text-emerald-400" : "text-rose-400"}`}>
+                          {partner.is_active ? "Active Account" : "Inactive"}
                         </div>
                       </td>
                       <td className="py-3 pl-3 pr-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedPartner(partner);
-                            setIsUpdateModalOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-800 bg-gray-950/60 px-2.5 py-1 text-[11px] font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          <span>Edit</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/delivery-partners/${partner.id}`)}
+                            className="inline-flex items-center gap-1 rounded-md border border-gray-800 bg-gray-950/60 px-2.5 py-1 text-[11px] font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="h-3 w-3 text-yellow-500" />
+                            <span>View</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedPartner(partner);
+                              setIsUpdateModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md border border-gray-800 bg-gray-950/60 px-2.5 py-1 text-[11px] font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                            title="Edit Partner"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            <span>Edit</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -383,7 +306,7 @@ export default function DeliveryPartners() {
       <AddDeliveryPartnerModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSuccess={handleAddSuccess}
+        onSuccess={() => refetch()}
       />
 
       {/* Update Modal */}
@@ -394,7 +317,7 @@ export default function DeliveryPartners() {
           setSelectedPartner(null);
         }}
         partner={selectedPartner}
-        onSuccess={handleUpdateSuccess}
+        onSuccess={() => refetch()}
       />
     </div>
   );

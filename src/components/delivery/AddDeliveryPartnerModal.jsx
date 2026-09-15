@@ -1,8 +1,17 @@
 import { useState, useEffect } from "react";
-import { X, Loader2, Bike } from "lucide-react";
+import { X, Loader2, Bike, Upload, Eye, EyeOff } from "lucide-react";
 import Select from "react-select";
+import { useCreateDeliveryPartner } from "../../hooks/deliveryPartners/useCreateDeliveryPartner";
 
-export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess, isLoading = false }) {
+export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess }) {
+  const createPartnerMutation = useCreateDeliveryPartner();
+
+  const genderOptions = [
+    { label: "Male", value: "MALE" },
+    { label: "Female", value: "FEMALE" },
+    { label: "Other", value: "OTHER" }
+  ];
+
   const vehicleTypeOptions = [
     { label: "Electric Scooter", value: "Electric Scooter" },
     { label: "Motorcycle", value: "Motorcycle" },
@@ -15,10 +24,21 @@ export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess, is
     last_name: "",
     email: "",
     phone_number: "",
+    password: "",
+    confirm_password: "",
+    gender: genderOptions[0],
+    date_of_birth: "1998-05-20",
+    profile_image_url: "",
+    profile_image_public_id: "",
     vehicle_type: vehicleTypeOptions[0],
     vehicle_number: "",
-    current_location: ""
+    current_location: "",
+    is_active: true
   });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -27,35 +47,106 @@ export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess, is
         last_name: "",
         email: "",
         phone_number: "",
+        password: "",
+        confirm_password: "",
+        gender: genderOptions[0],
+        date_of_birth: "1998-05-20",
+        profile_image_url: "",
+        profile_image_public_id: "",
         vehicle_type: vehicleTypeOptions[0],
         vehicle_number: "",
-        current_location: ""
+        current_location: "",
+        is_active: true
       });
+      setShowPassword(false);
+      setShowConfirmPassword(false);
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "localbasket_preset");
+
+      const response = await fetch(
+        "https://api.cloudinary.com/v1_1/dup5b38zp/image/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Upload failed");
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        profile_image_url: data.secure_url,
+        profile_image_public_id: data.public_id,
+      }));
+    } catch (error) {
+      alert(error.message || "Image upload failed");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.first_name.trim() || !form.phone_number.trim()) {
-      alert("Please provide at least a first name and phone number.");
+
+    if (!form.first_name.trim() || !form.phone_number.trim() || !form.email.trim()) {
+      alert("Please provide required fields: First Name, Email, and Phone Number.");
+      return;
+    }
+
+    if (!form.password || form.password.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (form.password !== form.confirm_password) {
+      alert("Passwords do not match. Please verify your password entries.");
       return;
     }
 
     const payload = {
-      ...form,
-      vehicle_type: form.vehicle_type?.value || "Electric Scooter"
+      phone_number: form.phone_number,
+      password: form.password,
+      email: form.email,
+      first_name: form.first_name,
+      last_name: form.last_name,
+      gender: form.gender?.value || "MALE",
+      date_of_birth: form.date_of_birth,
+      profile_image_url: form.profile_image_url,
+      profile_image_public_id: form.profile_image_public_id,
+      vehicle_type: form.vehicle_type?.value || "Electric Scooter",
+      vehicle_number: form.vehicle_number,
+      current_location: form.current_location,
+      is_active: form.is_active
     };
 
-    if (onSuccess) {
-      onSuccess(payload);
-    } else {
-      console.log("New Delivery Partner Payload:", payload);
-      alert(`Delivery Partner "${form.first_name} ${form.last_name}" added successfully!`);
-      onClose();
-    }
+    createPartnerMutation.mutate(payload, {
+      onSuccess: () => {
+        if (onSuccess) onSuccess();
+        onClose();
+      },
+      onError: (error) => {
+        alert(error?.message || "Failed to create delivery partner.");
+      }
+    });
   };
+
+  const isLoading = createPartnerMutation.isPending || isUploading;
 
   // Custom dark theme styles matching dashboard UI
   const customSelectStyles = {
@@ -136,7 +227,7 @@ export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess, is
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-300 mb-1">
-                First Name
+                First Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -156,7 +247,7 @@ export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess, is
               <input
                 type="text"
                 disabled={isLoading}
-                placeholder="e.g. Verma"
+                placeholder="e.g. Kumar"
                 value={form.last_name}
                 onChange={(e) => setForm({ ...form, last_name: e.target.value })}
                 className="w-full rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-gray-100 placeholder-gray-500 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 disabled:opacity-50 transition-colors"
@@ -167,12 +258,13 @@ export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess, is
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-300 mb-1">
-                Email Address
+                Email Address <span className="text-rose-500">*</span>
               </label>
               <input
                 type="email"
+                required
                 disabled={isLoading}
-                placeholder="rahul.verma@deliver.com"
+                placeholder="rahul@example.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-gray-100 placeholder-gray-500 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 disabled:opacity-50 transition-colors"
@@ -181,16 +273,95 @@ export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess, is
 
             <div>
               <label className="block text-xs font-semibold text-gray-300 mb-1">
-                Phone Number
+                Phone Number <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 disabled={isLoading}
-                placeholder="9876543210"
+                placeholder="6372362347"
                 value={form.phone_number}
                 onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
                 className="w-full rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-gray-100 placeholder-gray-500 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 disabled:opacity-50 transition-colors"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative">
+              <label className="block text-xs font-semibold text-gray-300 mb-1">
+                Password <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  disabled={isLoading}
+                  placeholder="********"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 pr-8 text-xs text-gray-100 placeholder-gray-500 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 disabled:opacity-50 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white"
+                >
+                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <label className="block text-xs font-semibold text-gray-300 mb-1">
+                Confirm Password <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  disabled={isLoading}
+                  placeholder="********"
+                  value={form.confirm_password}
+                  onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
+                  className="w-full rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 pr-8 text-xs text-gray-100 placeholder-gray-500 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 disabled:opacity-50 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-1">
+                Gender
+              </label>
+              <Select
+                isDisabled={isLoading}
+                options={genderOptions}
+                value={form.gender}
+                onChange={(selected) => setForm({ ...form, gender: selected })}
+                styles={customSelectStyles}
+                isSearchable={false}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-1">
+                Date of Birth
+              </label>
+              <input
+                type="date"
+                disabled={isLoading}
+                value={form.date_of_birth}
+                onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+                className="w-full rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-gray-100 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 disabled:opacity-50 transition-colors"
               />
             </div>
           </div>
@@ -225,18 +396,34 @@ export default function AddDeliveryPartnerModal({ isOpen, onClose, onSuccess, is
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1">
-              Initial Operating Location / Base Hub
-            </label>
-            <input
-              type="text"
-              disabled={isLoading}
-              placeholder="e.g. Noida Sector 62"
-              value={form.current_location}
-              onChange={(e) => setForm({ ...form, current_location: e.target.value })}
-              className="w-full rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-gray-100 placeholder-gray-500 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 disabled:opacity-50 transition-colors"
-            />
+          <div className="grid grid-cols-2 gap-3 items-center">
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-1">
+                Initial Location / Base Hub
+              </label>
+              <input
+                type="text"
+                disabled={isLoading}
+                placeholder="e.g. Noida Sector 62"
+                value={form.current_location}
+                onChange={(e) => setForm({ ...form, current_location: e.target.value })}
+                className="w-full rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-gray-100 placeholder-gray-500 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 disabled:opacity-50 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 mb-1">
+                Profile Image
+              </label>
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors w-full justify-center">
+                  <Upload className="h-3.5 w-3.5 text-yellow-500" />
+                  <span>{isUploading ? "Uploading..." : "Upload Photo"}</span>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isLoading} />
+                </label>
+                {form.profile_image_url && <span className="text-[10px] text-emerald-400 font-medium">Ready</span>}
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-gray-800">

@@ -22,6 +22,7 @@ import PrintServices from "../pages/PrintServices";
 import FoodCategories from "../pages/FoodCategories";
 import UserManagement from "../pages/UserManagement";
 import DeliveryPartners from "../pages/DeliveryPartners";
+import DeliveryPartnerDetails from "../pages/DeliveryPartnerDetails";
 
 // Placeholders for remaining sidebar routes
 const PagePlaceholder = (title) => () => (
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
           // User Management
           { path: "users", element: <UserManagement /> },
           { path: "delivery-partners", element: <DeliveryPartners /> },
+          { path: "delivery-partners/:id", element: <DeliveryPartnerDetails /> },
           
           // Catalog & Categories
           { path: "categories", element: <Categories /> },
